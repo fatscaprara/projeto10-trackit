@@ -1,225 +1,107 @@
-import { useNavigate, Link } from "react-router-dom";
-import { useState, useContext } from "react";
-import { ThreeDots } from "react-loader-spinner";
-import axios from "axios";
+import { useContext } from "react";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import { Link } from "react-router-dom";
 import styled from "styled-components";
 import TokenContext from "../contextos/TokenContext";
-import logo from "../assets/logo.svg";
+import "react-circular-progressbar/dist/styles.css";
 
-export default function Home() {
-  const { token, setToken, setImagemPerfil } = useContext(TokenContext);
-
-  const navigate = useNavigate();
-  const [dadosLogin, setDadosLogin] = useState({ email: "", password: "" });
-  const [carregandoLogin, setCarregandoLogin] = useState(false);
-
-  function fazerLogin(e) {
-    e.preventDefault();
-    setCarregandoLogin(true);
-    const promise = axios.post(
-      "https://mock-api.bootcamp.respondeai.com.br/api/v2/trackit/auth/login",
-      dadosLogin
-    );
-    promise.then((response) => {
-      const { data } = response;
-      const { token, image } = data;
-      localStorage.setItem("email", dadosLogin.email);
-      localStorage.setItem("password", dadosLogin.password);
-      navigate("/hoje/");
-      setToken(token);
-      setImagemPerfil(image);
-    });
-    promise.catch((err) => {
-      const { response } = err;
-      const { data } = response;
-      const { message } = data;
-      alert(message);
-      setDadosLogin({ email: "", password: "" });
-      setCarregandoLogin(false);
-    });
-  }
+export default function TopoEMenu() {
+  const {
+    token,
+    imagemPerfil,
+    receberHistorico,
+    receberHabitosHoje,
+    porcentagem,
+    receberHabitosDiarios,
+  } = useContext(TokenContext);
 
   if (token !== "") {
-    return <FrenteLogado>Você está logado! :)</FrenteLogado>;
-  } else if (
-    localStorage.email !== undefined &&
-    localStorage.password !== undefined &&
-    token === ""
-  ) {
-    const promise = axios.post(
-      "https://mock-api.bootcamp.respondeai.com.br/api/v2/trackit/auth/login",
-      {
-        email: localStorage.getItem("email"),
-        password: localStorage.getItem("password"),
-      }
-    );
-    promise.then((response) => {
-      const { data } = response;
-      const { token, image } = data;
-      navigate("/hoje/");
-      setToken(token);
-      setImagemPerfil(image);
-    });
-    promise.catch((err) => {
-      const { response } = err;
-      const { data } = response;
-      const { message } = data;
-      alert(message);
-      setDadosLogin({ email: "", password: "" });
-      setCarregandoLogin(false);
-    });
     return (
-      <LoginAutomatico>
-        <h1>Logando automaticamente!</h1>
-        <ThreeDots color="#52B6FF" height={80} width={80} />
-      </LoginAutomatico>
-    );
-  } else {
-    return (
-      <Fundo>
-        <FrenteLogin>
-          <img src={logo} alt="logo" />
-          {carregandoLogin === false ? (
-            <form onSubmit={fazerLogin}>
-              <input
-                type="email"
-                value={dadosLogin.email}
-                onChange={(e) =>
-                  setDadosLogin({ ...dadosLogin, email: e.target.value })
-                }
-                nome="email"
-                id="email"
-                placeholder="email"
-                required
-              />
-              <input
-                type="password"
-                value={dadosLogin.password}
-                onChange={(e) =>
-                  setDadosLogin({ ...dadosLogin, password: e.target.value })
-                }
-                nome="senha"
-                id="senha"
-                placeholder="senha"
-                required
-              />
-              <button type="submit">Entrar</button>
-            </form>
-          ) : (
-            <form onSubmit={fazerLogin}>
-              <input
-                type="email"
-                value={dadosLogin.email}
-                onChange={(e) =>
-                  setDadosLogin({ ...dadosLogin, email: e.target.value })
-                }
-                nome="email"
-                id="email"
-                placeholder="email"
-                required
-                disabled
-              />
-              <input
-                type="password"
-                value={dadosLogin.password}
-                onChange={(e) =>
-                  setDadosLogin({ ...dadosLogin, password: e.target.value })
-                }
-                nome="senha"
-                id="senha"
-                placeholder="senha"
-                required
-                disabled
-              />
-              <button disabled>
-                <ThreeDots color="#FFFFFF" height={13} width={13} />
-              </button>
-            </form>
-          )}
-          <Link to="/cadastro">
-            <h1>Não tem uma conta? Cadastre-se!</h1>
+      <>
+        <Topo
+          onLoad={() => {
+            receberHistorico();
+            receberHabitosHoje();
+            receberHabitosDiarios();
+          }}
+        >
+          <h1>TrackIt</h1>
+          <img src={imagemPerfil} alt="foto" />
+        </Topo>
+        <Base>
+          <Link to="/habitos/">
+            <h1>Hábitos</h1>
           </Link>
-        </FrenteLogin>
-      </Fundo>
+          <Link to="/historico/">
+            <h1>Histórico</h1>
+          </Link>
+        </Base>
+        <Link to="/hoje/">
+          <BotaoHoje onClick={receberHabitosHoje}>
+            <CircularProgressbar
+              value={porcentagem.base}
+              maxValue={porcentagem.total}
+              text={"Hoje"}
+              styles={buildStyles({
+                pathColor: `rgba(255, 255, 255, ${
+                  (porcentagem.base / porcentagem.total) * 100
+                })`,
+                textColor: "#FFFFFF",
+                trailColor: "#52B6FF",
+              })}
+            ></CircularProgressbar>
+          </BotaoHoje>
+        </Link>
+      </>
     );
-  }
+  } else return <></>;
 }
 
-const Fundo = styled.figure`
+const Topo = styled.header`
   position: fixed;
-  height: 100vh;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  top: 0;
   width: 100vw;
-  background-color: #ffffff;
-`;
-
-const FrenteLogado = styled.figure`
-  position: fixed;
-  top: calc(50vh - 20px);
-  left: calc(50vw - 105.25px);
-  padding: 10px;
-  border-radius: 5px;
-  background-color: #52b6ff;
-  font-size: 20px;
-  color: #ffffff;
-`;
-
-const LoginAutomatico = styled.main`
-  position: fixed;
-  top: calc(50vh - 60px);
-  left: calc(50vw - 145.1px);
-  padding: 10px;
-  border-radius: 5px;
-  /* background-color: #52B6FF; */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  font-size: 20px;
-  color: #52b6ff;
-`;
-
-const FrenteLogin = styled.section`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: calc(50vh - (396px / 2));
-  img {
-    width: 180px;
-    margin-bottom: 33px;
-  }
-  form {
-    width: 303px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    * {
-      width: 100%;
-    }
-    input {
-      height: 45px;
-      background: #ffffff;
-      border: 1px solid #d5d5d5;
-      border-radius: 5px;
-      margin-bottom: 6px;
-      font-size: 20px;
-    }
-    input::placeholder {
-      font-size: 20px;
-      color: #dbdbdb;
-    }
-    button {
-      height: 45px;
-      background: #52b6ff;
-      border-radius: 5px;
-      border: none;
-      margin-bottom: 25px;
-      font-size: 21px;
-      color: #ffffff;
-    }
-  }
+  padding: 10px 18px;
+  background-color: #126ba5;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.15);
+  z-index: 1;
   h1 {
-    font-size: 14px;
-    text-decoration-line: underline;
+    font-family: "Playball";
+    font-size: 39px;
+    color: #ffffff;
+  }
+  img {
+    width: 51px;
+    height: 51px;
+    border-radius: 50%;
+  }
+`;
+
+const Base = styled.footer`
+  position: fixed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  bottom: 0;
+  width: 100vw;
+  padding: 26px 36px;
+  background-color: #ffffff;
+  z-index: 1;
+  h1 {
     color: #52b6ff;
   }
+`;
+const BotaoHoje = styled.figure`
+  position: fixed;
+  bottom: 10px;
+  left: calc(50vw - 45px);
+  width: 90px;
+  height: 90px;
+  padding: 6px;
+  border-radius: 50%;
+  background-color: #52b6ff;
+  z-index: 2;
 `;
